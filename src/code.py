@@ -176,6 +176,9 @@ def collect_data(air_quality_sensor, co2_sensor, temperature_sensor, battery_sen
 
     post_to_db(all_sensor_data)
 
+display = board.DISPLAY
+display.brightness = 0.1
+
 initialize_wifi_connection()
 pool = socketpool.SocketPool(wifi.radio)
 requests = adafruit_requests.Session(pool, ssl.create_default_context())
