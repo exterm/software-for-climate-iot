@@ -7,11 +7,10 @@ deploy: dist/settings.toml $(patsubst src/%, $(DEVICE_PATH)/%, $(wildcard src/*)
 	@echo "Deployed to $(DEVICE_PATH)"
 
 $(DEVICE_PATH)/%: dist/%
-	cp -r $< $@
+	cp $< $@
 
 shell:
 	screen $(DEVICE_ADDRESS) 115200
-
 
 dist/settings.toml: src/settings.toml SECRET_SETTINGS
 	@mkdir -p dist
