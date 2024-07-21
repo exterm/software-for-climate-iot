@@ -44,28 +44,34 @@ def initialize_sensors():
 
     try:
         air_quality_sensor = PM25_I2C(i2c)
+        print("Found air quality sensor")
     except Exception:
         print("No air quality sensor found")
         air_quality_sensor = None
 
     try:
         co2_sensor = SCD4X(i2c)
+        print("Found SCD4X CO2, temp and humidity sensor")
         co2_sensor.start_periodic_measurement()
     except Exception:
-        print("No CO2 sensor found")
+        print("No SCD4X sensor found")
         co2_sensor = None
 
     try:
         temperature_sensor = BME280(i2c)
+        print("Found BME280 temperature sensor")
     except Exception:
-        print("No temperature sensor found")
+        print("No BME280 temperature sensor found")
         temperature_sensor = None
 
     try:
         battery_sensor = MAX17048(i2c)
+        print("Found battery sensor")
     except Exception:
         print("No battery sensor found")
         battery_sensor = None
+
+    print()
 
     return air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor
 
@@ -74,7 +80,7 @@ def post_to_db(sensor_data: dict):
     """Store sensor data in our supabase DB along with appropriate metadata"""
     if not DEVICE_ID:
         raise Exception("Please set a unique device id!")
-    
+
     # Prepare the database row, augmenting the sensor data with metadata
     db_row = {
         "device_id": DEVICE_ID,
@@ -83,9 +89,15 @@ def post_to_db(sensor_data: dict):
             **sensor_data
         ),
     }
-    print(db_row)
+    # print(db_row)
+    print("Report:")
+    print("Battery percentage:", round(db_row["content"]["battery_pct"], 2), "%")
+    if db_row["content"].get("temperature_c"):
+        print("Temperature:", round(db_row["content"]["temperature_c"], 2), "°C")
+        print("Humidity:", round(db_row["content"]["humidity_relative"], 2), "%")
+        print("CO2:", round(db_row["content"]["co2_ppm"], 2), "ppm")
 
-    print("Posting to DB")
+    print("Posting to DB at", fetch_current_time())
     try:
         response = requests.post(
             url=SUPABASE_POST_URL,
@@ -116,6 +128,10 @@ def post_to_db(sensor_data: dict):
     else:
         print("Post complete")
 
+    print()
+
+def fetch_current_time():
+    return requests.get("http://worldclockapi.com/api/json/est/now").json()['currentDateTime']
 
 def collect_data(air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor):
     """Get the latest data from the sensors, display it, and record it in the cloud."""

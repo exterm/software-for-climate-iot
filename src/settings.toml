@@ -1,0 +1,5 @@
+# Data collection constants
+DEVICE_ID = "Philip-Adafruit"
+
+# Set a location (recommended: "indoors" or "outdoors").
+LOCATION = "indoors"

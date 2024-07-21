@@ -1,0 +1,10 @@
+adafruit_connection_manager==3.1.1
+adafruit_datetime==1.2.7
+adafruit_max1704x==1.0.10
+adafruit_requests==4.1.4
+adafruit_scd4x==1.4.2
+neopixel==6.3.11
+adafruit_bme280==2.6.24
+adafruit_pm25==2.1.16
+adafruit_register==1.9.18
+adafruit_bus_device==5.2.9
