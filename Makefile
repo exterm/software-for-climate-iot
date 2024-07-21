@@ -27,7 +27,7 @@ dist/%: src/%
 clean:
 	@echo "cleaning"
 	@rm -rf dist
-	@find $(DEVICE_PATH) -mindepth 1 -maxdepth 1 -type f -not -name "boot_out.txt" -delete
+	@find $(DEVICE_PATH) -type f -not -name "boot_out.txt" -delete
 	@echo "done"
 
 install-libraries:
