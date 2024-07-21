@@ -21,8 +21,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 LOCATION = os.getenv("LOCATION")
 
 # This controls how often your device sends data to the database
-LOOP_TIME_S = 60
-
+INTERVAL_S = 60
 
 # Prepare to use the internet 💫
 def initialize_wifi_connection():
@@ -31,12 +30,6 @@ def initialize_wifi_connection():
     wifi.radio.connect(
         os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD")
     )
-
-
-initialize_wifi_connection()
-pool = socketpool.SocketPool(wifi.radio)
-requests = adafruit_requests.Session(pool, ssl.create_default_context())
-
 
 def initialize_sensors():
     """Initialize connections to each possible sensor, if connected"""
@@ -183,6 +176,9 @@ def collect_data(air_quality_sensor, co2_sensor, temperature_sensor, battery_sen
 
     post_to_db(all_sensor_data)
 
+initialize_wifi_connection()
+pool = socketpool.SocketPool(wifi.radio)
+requests = adafruit_requests.Session(pool, ssl.create_default_context())
 
 (
     air_quality_sensor,
@@ -204,4 +200,4 @@ while True:
             microcontroller.on_next_reset(microcontroller.RunMode.NORMAL)
             microcontroller.reset()
 
-    time.sleep(LOOP_TIME_S)
+    time.sleep(INTERVAL_S)
