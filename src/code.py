@@ -90,7 +90,8 @@ def post_to_db(sensor_data: dict):
         print("Humidity:", round(db_row["content"]["humidity_relative"], 2), "%")
         print("CO2:", round(db_row["content"]["co2_ppm"], 2), "ppm")
 
-    print("Posting to DB at", fetch_current_time())
+    # print("Posting to DB at", fetch_current_time())
+    print("Posting to DB")
     try:
         response = requests.post(
             url=SUPABASE_POST_URL,
@@ -124,6 +125,7 @@ def post_to_db(sensor_data: dict):
     print()
 
 def fetch_current_time():
+    # TODO: Investigate why this starts failing at some point. API rate limiting?
     return requests.get("http://worldclockapi.com/api/json/est/now").json()['currentDateTime']
 
 def collect_data(air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor):
