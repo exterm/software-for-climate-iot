@@ -192,6 +192,8 @@ requests = adafruit_requests.Session(pool, ssl.create_default_context())
     battery_sensor,
 ) = initialize_sensors()
 
+time.sleep(5)
+
 while True:
     try:
         collect_data(air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor)
