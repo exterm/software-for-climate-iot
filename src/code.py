@@ -109,6 +109,8 @@ def post_to_db(sensor_data: dict):
 
     print()
 
+    return response
+
 def collect_data(co2_sensor, battery_sensor):
     """Get the latest data from the sensors, display it, and record it in the cloud."""
     # Python3 kwarg-style dict concatenation syntax doesn't seem to work in CircuitPython,
