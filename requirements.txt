@@ -5,7 +5,7 @@ adafruit_pixelbuf==2.0.4
 adafruit_requests==4.1.4
 adafruit_scd4x==1.4.2
 neopixel==6.3.11
-adafruit_bme280==2.6.24
+# adafruit_bme280==2.6.24
 adafruit_bus_device==5.2.9
-adafruit_pm25==2.1.16
+# adafruit_pm25==2.1.16
 adafruit_register==1.9.18

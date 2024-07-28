@@ -10,9 +10,7 @@ import busio
 import microcontroller
 import socketpool
 import wifi
-from adafruit_bme280.basic import Adafruit_BME280_I2C as BME280
 from adafruit_max1704x import MAX17048
-from adafruit_pm25.i2c import PM25_I2C
 from adafruit_scd4x import SCD4X
 
 DEVICE_ID = os.getenv("DEVICE_ID")
@@ -36,26 +34,12 @@ def initialize_sensors():
     i2c = busio.I2C(board.SCL, board.SDA)
 
     try:
-        air_quality_sensor = PM25_I2C(i2c)
-        print("Found air quality sensor")
-    except Exception:
-        print("No air quality sensor found")
-        air_quality_sensor = None
-
-    try:
         co2_sensor = SCD4X(i2c)
         print("Found SCD4X CO2, temp and humidity sensor")
         co2_sensor.start_periodic_measurement()
     except Exception:
         print("No SCD4X sensor found")
         co2_sensor = None
-
-    try:
-        temperature_sensor = BME280(i2c)
-        print("Found BME280 temperature sensor")
-    except Exception:
-        print("No BME280 temperature sensor found")
-        temperature_sensor = None
 
     try:
         battery_sensor = MAX17048(i2c)
@@ -66,7 +50,8 @@ def initialize_sensors():
 
     print()
 
-    return air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor
+    # return air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor
+    return co2_sensor, battery_sensor
 
 
 def post_to_db(sensor_data: dict):
@@ -124,28 +109,11 @@ def post_to_db(sensor_data: dict):
 
     print()
 
-def fetch_current_time():
-    # TODO: Investigate why this starts failing at some point. API rate limiting?
-    return requests.get("http://worldclockapi.com/api/json/est/now").json()['currentDateTime']
-
-def collect_data(air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor):
+def collect_data(co2_sensor, battery_sensor):
     """Get the latest data from the sensors, display it, and record it in the cloud."""
     # Python3 kwarg-style dict concatenation syntax doesn't seem to work in CircuitPython,
     # so we have to use mutation and update the dict as we go along
     all_sensor_data = {}
-
-    if air_quality_sensor:
-        # This sensor collects the following data:
-        # PM1.0, PM2.5 and PM10.0 concentration in both standard (at sea level) & enviromental units (at ambient pressure)
-        # Particulate matter per 0.1L air, categorized into 0.3um, 0.5um, 1.0um, 2.5um, 5.0um and 10um size bins
-
-        # The data is structured as a dictionary with keys of this format:
-        # "pmXX standard"   : PMX.X concentration at standard pressure (sea level)
-        # "pmXX env"        : PMX.X concentration at ambient pressure
-        # "particles XXum"  : Particulate matter of size > X.Xum per 0.1L air
-        air_quality_data = air_quality_sensor.read() if air_quality_sensor else {}
-
-        all_sensor_data.update(air_quality_data)
 
     if battery_sensor:
         all_sensor_data.update(
@@ -164,18 +132,6 @@ def collect_data(air_quality_sensor, co2_sensor, temperature_sensor, battery_sen
             }
         )
 
-    if temperature_sensor:
-        all_sensor_data.update(
-            {
-                # Note: the CO2 sensor also collects temperature and relative humidity
-                # If you have both, we default to the data collected by this temperature sensor
-                "temperature_c": temperature_sensor.temperature,
-                "humidity_relative": temperature_sensor.relative_humidity,
-                "pressure_hpa": temperature_sensor.pressure,
-                "altitude_m": temperature_sensor.altitude,
-            }
-        )
-
     post_to_db(all_sensor_data)
 
 display = board.DISPLAY
@@ -186,9 +142,7 @@ pool = socketpool.SocketPool(wifi.radio)
 requests = adafruit_requests.Session(pool, ssl.create_default_context())
 
 (
-    air_quality_sensor,
     co2_sensor,
-    temperature_sensor,
     battery_sensor,
 ) = initialize_sensors()
 
@@ -196,7 +150,7 @@ time.sleep(5)
 
 while True:
     try:
-        collect_data(air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor)
+        collect_data(co2_sensor, battery_sensor)
     except (RuntimeError, OSError) as e:
         # Sometimes this is invalid PM2.5 checksum or timeout
         print(f"{type(e)}: {e}")
