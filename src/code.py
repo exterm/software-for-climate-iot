@@ -36,7 +36,7 @@ def initialize_sensors():
     try:
         co2_sensor = SCD4X(i2c)
         print("Found SCD4X CO2, temp and humidity sensor")
-        co2_sensor.start_periodic_measurement()
+        co2_sensor.start_low_periodic_measurement()
     except Exception:
         print("No SCD4X sensor found")
         co2_sensor = None
