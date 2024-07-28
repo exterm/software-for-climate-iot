@@ -13,6 +13,8 @@ import wifi
 from adafruit_max1704x import MAX17048
 from adafruit_scd4x import SCD4X
 
+import notify
+
 DEVICE_ID = os.getenv("DEVICE_ID")
 SUPABASE_POST_URL = os.getenv("SUPABASE_POST_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -134,7 +136,7 @@ def collect_data(co2_sensor, battery_sensor):
             }
         )
 
-    post_to_db(all_sensor_data)
+    return all_sensor_data
 
 display = board.DISPLAY
 display.brightness = 0.1
@@ -150,9 +152,24 @@ requests = adafruit_requests.Session(pool, ssl.create_default_context())
 
 time.sleep(5)
 
+CO2_THRESHOLD = 900
+print(f"CO2 threshold set to {CO2_THRESHOLD} ppm")
+notifier = notify.TwilioNotifier(requests)
+
+co2_alert_active = False
+
 while True:
     try:
-        collect_data(co2_sensor, battery_sensor)
+        data = collect_data(co2_sensor, battery_sensor)
+        co2_ppm = data.get("co2_ppm", 0)
+        if co2_ppm > CO2_THRESHOLD:
+            if not co2_alert_active:
+                notifier.send_alert(f"Reached unsafe CO2 levels ({co2_ppm}).")
+                co2_alert_active = True
+        elif co2_alert_active:
+            notifier.send_alert("CO2 levels returned to safe levels.")
+            co2_alert_active = False
+        post_to_db(data)
     except (RuntimeError, OSError) as e:
         # Sometimes this is invalid PM2.5 checksum or timeout
         print(f"{type(e)}: {e}")
