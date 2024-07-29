@@ -159,8 +159,9 @@ requests = adafruit_requests.Session(pool, ssl.create_default_context())
 
 time.sleep(5)
 
-CO2_THRESHOLD = 900
-print(f"CO2 threshold set to {CO2_THRESHOLD} ppm")
+CO2_UNSAFE_OVER = 900
+CO2_SAFE_UNDER = 800
+print(f"CO2 thresholds set to {CO2_UNSAFE_OVER} ppm (unsafe) and {CO2_SAFE_UNDER} ppm (safe).")
 notifier = notify.TwilioNotifier(requests)
 
 co2_alert_active = False
@@ -169,11 +170,10 @@ while True:
     try:
         data = collect_data(co2_sensor, battery_sensor)
         co2_ppm = data.get("co2_ppm", 0)
-        if co2_ppm > CO2_THRESHOLD:
-            if not co2_alert_active:
-                notifier.send_alert(f"Reached unsafe CO2 levels ({co2_ppm}).")
-                co2_alert_active = True
-        elif co2_alert_active:
+        if not co2_alert_active and co2_ppm > CO2_UNSAFE_OVER:
+            notifier.send_alert(f"Reached unsafe CO2 levels ({co2_ppm}).")
+            co2_alert_active = True
+        elif co2_alert_active and co2_ppm < CO2_SAFE_UNDER:
             notifier.send_alert("CO2 levels returned to normal.")
             co2_alert_active = False
         post_to_db(data)
