@@ -167,7 +167,7 @@ while True:
                 notifier.send_alert(f"Reached unsafe CO2 levels ({co2_ppm}).")
                 co2_alert_active = True
         elif co2_alert_active:
-            notifier.send_alert("CO2 levels returned to safe levels.")
+            notifier.send_alert("CO2 levels returned to normal.")
             co2_alert_active = False
         post_to_db(data)
     except (RuntimeError, OSError) as e:
