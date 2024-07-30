@@ -159,7 +159,7 @@ requests = adafruit_requests.Session(pool, ssl.create_default_context())
 
 time.sleep(5)
 
-CO2_UNSAFE_OVER = 900
+CO2_UNSAFE_OVER = 1000
 CO2_SAFE_UNDER = 800
 print(f"CO2 thresholds set to {CO2_UNSAFE_OVER} ppm (unsafe) and {CO2_SAFE_UNDER} ppm (safe).")
 notifier = notify.TwilioNotifier(requests)
