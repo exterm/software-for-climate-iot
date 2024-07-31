@@ -42,7 +42,6 @@ def initialize_sensors():
         co2_sensor = SCD4X(i2c)
         print("Found SCD4X CO2, temp and humidity sensor")
         if LOW_POWER_MODE:
-            co2_sensor.temperature_offset = LOW_POWER_TEMP_OFFSET
             co2_sensor.start_low_periodic_measurement()
         else:
             co2_sensor.start_periodic_measurement()
@@ -135,10 +134,15 @@ def collect_data(co2_sensor, battery_sensor):
         )
 
     if co2_sensor and co2_sensor.data_ready:
+        if LOW_POWER_MODE:
+            temp = co2_sensor.temperature + LOW_POWER_TEMP_OFFSET
+        else:
+            temp = co2_sensor.temperature
+
         all_sensor_data.update(
             {
                 "co2_ppm": co2_sensor.CO2,
-                "temperature_c": co2_sensor.temperature,
+                "temperature_c": temp,
                 "humidity_relative": co2_sensor.relative_humidity,
             }
         )
