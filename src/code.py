@@ -21,7 +21,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 LOCATION = os.getenv("LOCATION")
 
 LOW_POWER_MODE = True
-LOW_POWER_TEMP_OFFSET = 2
+LOW_POWER_TEMP_OFFSET = 2.5
 
 # This controls how often your device sends data to the database
 INTERVAL_S = 60
