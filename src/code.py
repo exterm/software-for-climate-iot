@@ -165,6 +165,7 @@ time.sleep(5)
 
 CO2_UNSAFE_OVER = 1000
 CO2_SAFE_UNDER = 800
+co2_max_while_over = 0
 print(f"CO2 thresholds set to {CO2_UNSAFE_OVER} ppm (unsafe) and {CO2_SAFE_UNDER} ppm (safe).")
 notifier = notify.TwilioNotifier(requests)
 
@@ -174,12 +175,15 @@ while True:
     try:
         data = collect_data(co2_sensor, battery_sensor)
         co2_ppm = data.get("co2_ppm", 0)
-        if not co2_alert_active and co2_ppm > CO2_UNSAFE_OVER:
-            notifier.send_alert(f"Reached unsafe CO2 levels ({co2_ppm}).")
-            co2_alert_active = True
+        if co2_ppm > CO2_UNSAFE_OVER:
+            co2_max_while_over = max(co2_max_while_over, co2_ppm)
+            if not co2_alert_active:
+                notifier.send_alert(f"Reached unsafe CO2 levels ({co2_ppm}).")
+                co2_alert_active = True
         elif co2_alert_active and co2_ppm < CO2_SAFE_UNDER:
-            notifier.send_alert("CO2 levels returned to normal.")
+            notifier.send_alert("CO2 levels returned to normal. Max level was {co2_max_while_over}.")
             co2_alert_active = False
+            co2_max_while_over = 0
         post_to_db(data)
     except (RuntimeError, OSError) as e:
         # Sometimes this is invalid PM2.5 checksum or timeout
