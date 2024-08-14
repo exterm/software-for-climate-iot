@@ -15,9 +15,12 @@ from adafruit_scd4x import SCD4X
 
 from alerts import CO2Alert
 from notify import TwilioNotifier
+from display import Dashboard
 
 DEVICE_ID = os.getenv("DEVICE_ID")
-SUPABASE_POST_URL = os.getenv("SUPABASE_POST_URL")
+SUPABASE_POST_URL: str = os.getenv("SUPABASE_POST_URL", "")
+if SUPABASE_POST_URL is "":
+    raise ValueError("SUPABASE_POST_URL environment variable is not set")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 LOCATION = os.getenv("LOCATION")
 
@@ -152,6 +155,9 @@ def collect_data(co2_sensor, battery_sensor):
 
 display = board.DISPLAY
 display.brightness = 0.1
+
+dashboard = Dashboard(display)
+dashboard.update(0.1, 0.5, 0.8)
 
 initialize_wifi_connection()
 pool = socketpool.SocketPool(wifi.radio)
