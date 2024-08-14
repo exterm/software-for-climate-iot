@@ -156,8 +156,14 @@ def collect_data(co2_sensor, battery_sensor):
 display = board.DISPLAY
 display.brightness = 0.1
 
-dashboard = Dashboard(display)
-dashboard.update(0.1, 0.5, 0.8)
+dashboard = Dashboard(display, 1030, 1250, 750)
+
+dashboard.update(
+    grid_intensity_g_kwh=100,
+    average_grid_intensity_g_kwh=200,
+    grid_clean_percent=50,
+    energy_usage_kwh=800,
+)
 
 initialize_wifi_connection()
 pool = socketpool.SocketPool(wifi.radio)
