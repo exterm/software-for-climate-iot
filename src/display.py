@@ -47,8 +47,23 @@ class Dashboard:
         self.palette[WHITE] = WHITE_HEX
         self.palette[GRAY] = GRAY_HEX
 
-        rows = [n*ROW_HEIGHT for n in range(3)]
+        self.rows = [n*ROW_HEIGHT for n in range(3)]
 
+        self._initialize_display(tier1_price_centicents, tier2_price_centicents)
+
+    def update(self, grid_intensity_g_kwh=0, average_grid_intensity_g_kwh=0, grid_clean_percent=0, energy_usage_kwh=0):
+        """Update the dashboard with the latest data."""
+        grid_intensity_percentage = grid_intensity_g_kwh/average_grid_intensity_g_kwh * 100
+        self.grid_intensity_gauge.width = self._bar_length_by_percent(grid_intensity_percentage)
+
+        self.grid_clean_share_gauge.width = self._bar_length_by_percent(grid_clean_percent)
+
+        energy_usage_percent = energy_usage_kwh/self.tier1_limit * 100
+        self.energy_usage_gauge.width = self._bar_length_by_percent(energy_usage_percent)
+
+    def _initialize_display(self, tier1_price_centicents, tier2_price_centicents):
+        rows = self.rows
+        full_width = self.display.width
         display_group = displayio.Group()
 
         # carbon intensity
@@ -64,7 +79,7 @@ class Dashboard:
         display_group.append(self.grid_intensity_gauge)
 
         average_tick = self._vertical_line(
-            x=display.width - OVER_LIMIT_WIDTH,
+            x=full_width - OVER_LIMIT_WIDTH,
             y=rows[0],
         )
         display_group.append(average_tick)
@@ -84,7 +99,7 @@ class Dashboard:
         display_group.append(self.grid_clean_share_gauge)
 
         capacity_tick = self._vertical_line(
-            x=display.width - OVER_LIMIT_WIDTH,
+            x=full_width - OVER_LIMIT_WIDTH,
             y=rows[1],
         )
         display_group.append(capacity_tick)
@@ -104,7 +119,7 @@ class Dashboard:
         display_group.append(self.energy_usage_gauge)
 
         tier1_limit_tick = self._vertical_line(
-            x=display.width - OVER_LIMIT_WIDTH,
+            x=full_width - OVER_LIMIT_WIDTH,
             y=rows[2],
         )
         display_group.append(tier1_limit_tick)
@@ -122,23 +137,13 @@ class Dashboard:
         # render the Tier 2 price over the right half of the gauge
         tier2_price = self._metric_label(
             text=self._price_label_text(tier2_price_centicents),
-            x=display.width - ROW_PADDING,
+            x=full_width - ROW_PADDING,
             y=rows[2],
             anchor_point=(1, 0.5),
         )
         display_group.append(tier2_price)
 
-        display.root_group = display_group
-
-    def update(self, grid_intensity_g_kwh=0, average_grid_intensity_g_kwh=0, grid_clean_percent=0, energy_usage_kwh=0):
-        """Update the dashboard with the latest data."""
-        grid_intensity_percentage = grid_intensity_g_kwh/average_grid_intensity_g_kwh * 100
-        self.grid_intensity_gauge.width = self._bar_length_by_percent(grid_intensity_percentage)
-
-        self.grid_clean_share_gauge.width = self._bar_length_by_percent(grid_clean_percent)
-
-        energy_usage_percent = energy_usage_kwh/self.tier1_limit * 100
-        self.energy_usage_gauge.width = self._bar_length_by_percent(energy_usage_percent)
+        self.display.root_group = display_group
 
     def _price_label_text(self, price_centicents):
         """Return a string representation of the price in cents per kWh."""
