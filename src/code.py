@@ -18,9 +18,9 @@ from notify import TwilioNotifier
 from display import Dashboard
 
 DEVICE_ID = os.getenv("DEVICE_ID")
-SUPABASE_POST_URL: str = os.getenv("SUPABASE_POST_URL", "")
-if SUPABASE_POST_URL is "":
-    raise ValueError("SUPABASE_POST_URL environment variable is not set")
+SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+if SUPABASE_URL is "":
+    raise ValueError("SUPABASE_URL environment variable is not set")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 LOCATION = os.getenv("LOCATION")
 
@@ -64,64 +64,6 @@ def initialize_sensors():
 
     # return air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor
     return co2_sensor, battery_sensor
-
-
-def post_to_db(sensor_data: dict):
-    """Store sensor data in our supabase DB along with appropriate metadata"""
-    if not DEVICE_ID:
-        raise Exception("Please set a unique device id!")
-
-    # Prepare the database row, augmenting the sensor data with metadata
-    db_row = {
-        "device_id": DEVICE_ID,
-        "content": dict(
-            location=LOCATION,
-            **sensor_data
-        ),
-    }
-    # print(db_row)
-    print("Report:")
-    print("Battery percentage:", round(db_row["content"]["battery_pct"], 2), "%")
-    if db_row["content"].get("temperature_c"):
-        print("Temperature:", round(db_row["content"]["temperature_c"], 2), "°C")
-        print("Humidity:", round(db_row["content"]["humidity_relative"], 2), "%")
-        print("CO2:", round(db_row["content"]["co2_ppm"], 2), "ppm")
-
-    # print("Posting to DB at", fetch_current_time())
-    print("Posting to DB")
-    try:
-        response = requests.post(
-            url=SUPABASE_POST_URL,
-            headers={
-                "apikey": SUPABASE_KEY,
-                "Authorization": f"bearer {SUPABASE_KEY}",
-                "Content-Type": "application/json",
-                "Prefer": "return=minimal",
-            },
-            data=json.dumps(db_row),
-        )
-    except socketpool.SocketPool.gaierror as e:
-        print(f"ConnectionError: {e}. Restarting networking.")
-        initialize_wifi_connection()
-        # Attempt to store some diagnostic data about this error
-        sensor_data.update(
-            {"network_reset": True, "network_stacktrace": traceback.format_exception(e)}
-        )
-        print("Recursively retrying post with saved stacktrace.")
-        response = post_to_db(sensor_data)
-
-    # PostgREST only sends response to a POST when something is wrong
-    error_details = response.content
-    if error_details:
-        print("Received response error code", error_details)
-        print(response.headers)
-        raise Exception(error_details)
-    else:
-        print("Post complete")
-
-    print()
-
-    return response
 
 def collect_data(co2_sensor, battery_sensor):
     """Get the latest data from the sensors, display it, and record it in the cloud."""
@@ -183,19 +125,8 @@ co2_alert_handler: CO2Alert = CO2Alert(
 )
 
 while True:
-    try:
-        data = collect_data(co2_sensor, battery_sensor)
-        co2_ppm = data.get("co2_ppm", 0)
-        co2_alert_handler.alert_maybe(co2_ppm)
-        post_to_db(data)
-    except (RuntimeError, OSError) as e:
-        # Sometimes this is invalid PM2.5 checksum or timeout
-        print(f"{type(e)}: {e}")
-        if str(e) == "pystack exhausted":
-            # This happens when our recursive retry logic fails.
-            print("Unable to recover from an error. Rebooting in 10s.")
-            time.sleep(10)
-            microcontroller.on_next_reset(microcontroller.RunMode.NORMAL)
-            microcontroller.reset()
+    data = collect_data(co2_sensor, battery_sensor)
+    co2_ppm = data.get("co2_ppm", 0)
+    co2_alert_handler.alert_maybe(co2_ppm)
 
     time.sleep(INTERVAL_S)
