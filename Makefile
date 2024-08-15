@@ -30,4 +30,8 @@ clean:
 	@echo "done"
 
 install-libraries:
-	circup install -r requirements.txt
+	@circup install -r requirements.txt
+
+.PHONY: requirements.txt
+requirements.txt:
+	@circup freeze -r
