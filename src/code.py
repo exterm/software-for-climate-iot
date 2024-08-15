@@ -1,13 +1,10 @@
-import json
 import os
 import ssl
 import time
-import traceback
 
 import adafruit_requests
 import board
 import busio
-import microcontroller
 import socketpool
 import wifi
 from adafruit_max1704x import MAX17048
@@ -16,16 +13,17 @@ from adafruit_scd4x import SCD4X
 from alerts import CO2Alert
 from notify import TwilioNotifier
 from display import Dashboard
+import fetch
 
 DEVICE_ID = os.getenv("DEVICE_ID")
-SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-if SUPABASE_URL is "":
-    raise ValueError("SUPABASE_URL environment variable is not set")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 LOCATION = os.getenv("LOCATION")
 
 LOW_POWER_MODE = True
 LOW_POWER_TEMP_OFFSET = 2.5
+
+TIER1_PRICE = 1030
+TIER2_PRICE = 1250
+TIER1_LIMIT = 750
 
 # This controls how often your device sends data to the database
 INTERVAL_S = 60
@@ -98,14 +96,7 @@ def collect_data(co2_sensor, battery_sensor):
 display = board.DISPLAY
 display.brightness = 0.1
 
-dashboard = Dashboard(display, 1030, 1250, 750)
-
-dashboard.update(
-    grid_intensity_g_kwh=100,
-    average_grid_intensity_g_kwh=200,
-    grid_clean_percent=50,
-    energy_usage_kwh=800,
-)
+dashboard = Dashboard(display, TIER1_PRICE, TIER2_PRICE, TIER1_LIMIT)
 
 initialize_wifi_connection()
 pool = socketpool.SocketPool(wifi.radio)
@@ -128,5 +119,13 @@ while True:
     data = collect_data(co2_sensor, battery_sensor)
     co2_ppm = data.get("co2_ppm", 0)
     co2_alert_handler.alert_maybe(co2_ppm)
+
+    dashboard_data = fetch.get_dashboard_data(requests)
+    dashboard.update(
+        grid_intensity_g_kwh=dashboard_data["latest_carbon_intensity"],
+        average_grid_intensity_g_kwh=dashboard_data["average_carbon_intensity"],
+        grid_clean_percent=dashboard_data["percent_carbon_free"],
+        energy_usage_kwh=0,
+    )
 
     time.sleep(INTERVAL_S)
