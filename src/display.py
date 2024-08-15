@@ -56,7 +56,21 @@ class Dashboard:
         grid_intensity_percentage = grid_intensity_g_kwh/average_grid_intensity_g_kwh * 100
         self.grid_intensity_gauge.width = self._bar_length_by_percent(grid_intensity_percentage)
 
+        intensity_text = self._metric_label(
+            text=f"{grid_intensity_g_kwh} gCO2/kWh",
+            x=TEXT_COLUMN_WIDTH + ROW_PADDING,
+            y=self.rows[0],
+        )
+        self.display.root_group.append(intensity_text)
+
         self.grid_clean_share_gauge.width = self._bar_length_by_percent(grid_clean_percent)
+
+        clean_text = self._metric_label(
+            text=f"{grid_clean_percent}%",
+            x=TEXT_COLUMN_WIDTH + ROW_PADDING,
+            y=self.rows[1],
+        )
+        self.display.root_group.append(clean_text)
 
         energy_usage_percent = energy_usage_kwh/self.tier1_limit * 100
         self.energy_usage_gauge.width = self._bar_length_by_percent(energy_usage_percent)
