@@ -55,7 +55,7 @@ class Dashboard:
 
         # carbon intensity
 
-        self.grid_intensity_gauge = ExceedableLimitGauge(
+        self.grid_intensity_gauge = VsAverageGauge(
             "Carbon",
             full_width,
             display_group,
@@ -65,7 +65,7 @@ class Dashboard:
 
         # grid stress
 
-        self.demand_gauge = ExceedableLimitGauge(
+        self.demand_gauge = VsAverageGauge(
             "Demand",
             full_width,
             display_group,
@@ -149,7 +149,7 @@ class ExceedableLimitGauge:
         percentage = value / limit * 100
         self.rectangle.width = self._bar_length_by_percentage(percentage)
 
-        self.rectangle.color_index = self._color_by_percentage(percentage)
+        return percentage
 
     def _vertical_line(self, x, y, color=WHITE):
         """Return a vertical line at the given x coordinate."""
@@ -177,6 +177,11 @@ class ExceedableLimitGauge:
         theoretical = int((self.full_width - TEXT_COLUMN_WIDTH - OVER_LIMIT_WIDTH) * percentage / 100)
 
         return max(1, theoretical)
+
+class VsAverageGauge(ExceedableLimitGauge):
+    def update(self, value, limit):
+        percentage = super().update(value, limit)
+        self.rectangle.color_index = self._color_by_percentage(percentage)
 
     def _color_by_percentage(self, percentage):
         """Return the color of the bar given a percentage."""
