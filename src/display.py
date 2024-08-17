@@ -36,53 +36,40 @@ class Dashboard:
     - current energy price per kWh based on tiered pricing and cumulative usage
     """
 
-    def __init__(self, display, tier1_price_centicents, tier2_price_centicents, tier1_limit):
-        self.display: FramebufferDisplay = display
+    def __init__(self, display: FramebufferDisplay, tier1_price_centicents, tier2_price_centicents, tier1_limit):
         self.tier1_limit: int = tier1_limit
 
-        self.palette = displayio.Palette(6)
-        self.palette[BLACK] = BLACK_HEX
-        self.palette[GREEN] = GREEN_HEX
-        self.palette[YELLOW] = YELLOW_HEX
-        self.palette[RED] = RED_HEX
-        self.palette[WHITE] = WHITE_HEX
-        self.palette[GRAY] = GRAY_HEX
+        palette = displayio.Palette(6)
+        palette[BLACK] = BLACK_HEX
+        palette[GREEN] = GREEN_HEX
+        palette[YELLOW] = YELLOW_HEX
+        palette[RED] = RED_HEX
+        palette[WHITE] = WHITE_HEX
+        palette[GRAY] = GRAY_HEX
 
-        self.rows = [n * ROW_HEIGHT for n in range(3)]
+        rows = [n * ROW_HEIGHT for n in range(3)]
 
-        self._initialize_display(tier1_price_centicents, tier2_price_centicents)
-
-    def update(self, grid_intensity_g_kwh=0, average_grid_intensity_g_kwh=0, grid_clean_percent=0, energy_usage_kwh=0):
-        """Update the dashboard with the latest data."""
-        self.grid_intensity_gauge.update(grid_intensity_g_kwh, average_grid_intensity_g_kwh)
-
-        self.grid_clean_share_gauge.update(grid_clean_percent, 100)
-
-        self.energy_usage_gauge.update(energy_usage_kwh, self.tier1_limit)
-
-    def _initialize_display(self, tier1_price_centicents, tier2_price_centicents):
-        rows = self.rows
-        full_width = self.display.width
+        full_width = display.width
         display_group = displayio.Group()
-        self.display.root_group = display_group
+        display.root_group = display_group
 
         # carbon intensity
 
         self.grid_intensity_gauge = ExceedableLimitGauge(
-            "Vs Avg",
+            "Carbon",
             full_width,
             display_group,
-            self.palette,
+            palette,
             rows[0],
         )
 
         # grid stress
 
-        self.grid_clean_share_gauge = ExceedableLimitGauge(
-            "Clean %",
+        self.demand_gauge = ExceedableLimitGauge(
+            "Demand",
             full_width,
             display_group,
-            self.palette,
+            palette,
             rows[1],
         )
 
@@ -92,7 +79,7 @@ class Dashboard:
             "Price",
             full_width,
             display_group,
-            self.palette,
+            palette,
             rows[2],
             left_label=self._price_label_text(tier1_price_centicents),
             right_label=self._price_label_text(tier2_price_centicents),
@@ -101,6 +88,21 @@ class Dashboard:
     def _price_label_text(self, price_centicents):
         """Return a string representation of the price in cents per kWh."""
         return f"{price_centicents/100:.2f} $/kWh"
+
+    def update(
+        self,
+        grid_intensity_g_kwh=0,
+        average_grid_intensity_g_kwh=0,
+        demand_MW=0,
+        average_demand_MW=0,
+        energy_usage_kwh=0,
+    ):
+        """Update the dashboard with the latest data."""
+        self.grid_intensity_gauge.update(grid_intensity_g_kwh, average_grid_intensity_g_kwh)
+
+        self.demand_gauge.update(demand_MW, average_demand_MW)
+
+        self.energy_usage_gauge.update(energy_usage_kwh, self.tier1_limit)
 
 
 class ExceedableLimitGauge:

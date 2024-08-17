@@ -15,8 +15,11 @@ from notify import TwilioNotifier
 from display import Dashboard
 import fetch
 
-DEVICE_ID = os.getenv("DEVICE_ID")
-LOCATION = os.getenv("LOCATION")
+ELECTRICITYMAPS_ZONE: str = os.getenv("ELECTRICITYMAPS_ZONE", "")
+
+# raise an error if the environment variable is not set
+if ELECTRICITYMAPS_ZONE == "":
+    raise ValueError("ELECTRICITYMAPS_ZONE environment variable is not set")
 
 LOW_POWER_MODE = True
 LOW_POWER_TEMP_OFFSET = 2.5
@@ -120,11 +123,12 @@ while True:
     co2_ppm = data.get("co2_ppm", 0)
     co2_alert_handler.alert_maybe(co2_ppm)
 
-    dashboard_data = fetch.get_dashboard_data(requests)
+    dashboard_data = fetch.get_dashboard_data(requests, ELECTRICITYMAPS_ZONE)
     dashboard.update(
         grid_intensity_g_kwh=dashboard_data["latest_carbon_intensity"],
         average_grid_intensity_g_kwh=dashboard_data["average_carbon_intensity"],
-        grid_clean_percent=dashboard_data["percent_carbon_free"],
+        demand_MW=dashboard_data["latest_power_consumption"],
+        average_demand_MW=dashboard_data["average_power_consumption"],
         energy_usage_kwh=0,
     )
 
