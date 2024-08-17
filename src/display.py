@@ -147,7 +147,9 @@ class ExceedableLimitGauge:
 
     def update(self, value, limit):
         percentage = value / limit * 100
-        self.rectangle.width = self._bar_length_by_percent(percentage)
+        self.rectangle.width = self._bar_length_by_percentage(percentage)
+
+        self.rectangle.color_index = self._color_by_percentage(percentage)
 
     def _vertical_line(self, x, y, color=WHITE):
         """Return a vertical line at the given x coordinate."""
@@ -170,8 +172,16 @@ class ExceedableLimitGauge:
             anchor_point=anchor_point,
         )
 
-    def _bar_length_by_percent(self, percentage):
+    def _bar_length_by_percentage(self, percentage):
         """Return the length of the bar in pixels given a percentage."""
         theoretical = int((self.full_width - TEXT_COLUMN_WIDTH - OVER_LIMIT_WIDTH) * percentage / 100)
 
         return max(1, theoretical)
+
+    def _color_by_percentage(self, percentage):
+        """Return the color of the bar given a percentage."""
+        if percentage < 90:
+            return GREEN
+        if percentage < 110:
+            return YELLOW
+        return RED
