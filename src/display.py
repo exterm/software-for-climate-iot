@@ -15,7 +15,7 @@ GRAY_HEX = 0x9E9E9E
 BAR_PADDING: int = 5
 BAR_HEIGHT: int = 25
 ROW_PADDING: int = 5
-ROW_HEIGHT: int = BAR_HEIGHT + 2*BAR_PADDING + 2*ROW_PADDING
+ROW_HEIGHT: int = BAR_HEIGHT + 2 * BAR_PADDING + 2 * ROW_PADDING
 TEXT_COLUMN_WIDTH: int = 45
 OVER_LIMIT_WIDTH: int = 75
 
@@ -24,6 +24,7 @@ import vectorio
 import displayio
 from adafruit_display_text.bitmap_label import Label
 import terminalio
+
 
 class Dashboard:
     """
@@ -47,110 +48,104 @@ class Dashboard:
         self.palette[WHITE] = WHITE_HEX
         self.palette[GRAY] = GRAY_HEX
 
-        self.rows = [n*ROW_HEIGHT for n in range(3)]
+        self.rows = [n * ROW_HEIGHT for n in range(3)]
 
         self._initialize_display(tier1_price_centicents, tier2_price_centicents)
 
     def update(self, grid_intensity_g_kwh=0, average_grid_intensity_g_kwh=0, grid_clean_percent=0, energy_usage_kwh=0):
         """Update the dashboard with the latest data."""
-        grid_intensity_percentage = grid_intensity_g_kwh/average_grid_intensity_g_kwh * 100
-        self.grid_intensity_gauge.width = self._bar_length_by_percent(grid_intensity_percentage)
+        self.grid_intensity_gauge.update(grid_intensity_g_kwh, average_grid_intensity_g_kwh)
 
-        intensity_text = self._metric_label(
-            text=f"{grid_intensity_g_kwh} gCO2/kWh",
-            x=TEXT_COLUMN_WIDTH + ROW_PADDING,
-            y=self.rows[0],
-        )
-        self.display.root_group.append(intensity_text)
+        self.grid_clean_share_gauge.update(grid_clean_percent, 100)
 
-        self.grid_clean_share_gauge.width = self._bar_length_by_percent(grid_clean_percent)
-
-        clean_text = self._metric_label(
-            text=f"{grid_clean_percent}%",
-            x=TEXT_COLUMN_WIDTH + ROW_PADDING,
-            y=self.rows[1],
-        )
-        self.display.root_group.append(clean_text)
-
-        energy_usage_percent = energy_usage_kwh/self.tier1_limit * 100
-        self.energy_usage_gauge.width = self._bar_length_by_percent(energy_usage_percent)
+        self.energy_usage_gauge.update(energy_usage_kwh, self.tier1_limit)
 
     def _initialize_display(self, tier1_price_centicents, tier2_price_centicents):
         rows = self.rows
         full_width = self.display.width
         display_group = displayio.Group()
+        self.display.root_group = display_group
 
         # carbon intensity
 
-        self.grid_intensity_gauge = vectorio.Rectangle(
-            pixel_shader=self.palette,
-            color_index=GRAY,
-            width=1,
-            height=BAR_HEIGHT,
-            x=TEXT_COLUMN_WIDTH,
-            y=rows[0] + BAR_PADDING + ROW_PADDING,
+        self.grid_intensity_gauge = ExceedableLimitGauge(
+            "Vs Avg",
+            full_width,
+            display_group,
+            self.palette,
+            rows[0],
         )
-        display_group.append(self.grid_intensity_gauge)
-
-        average_tick = self._vertical_line(
-            x=full_width - OVER_LIMIT_WIDTH,
-            y=rows[0],
-        )
-        display_group.append(average_tick)
-
-        display_group.append(self._metric_label("Vs Avg", y=rows[0]))
 
         # grid stress
 
-        self.grid_clean_share_gauge = vectorio.Rectangle(
-            pixel_shader=self.palette,
-            color_index=GRAY,
-            width=1,
-            height=BAR_HEIGHT,
-            x=TEXT_COLUMN_WIDTH,
-            y=rows[1] + BAR_PADDING + ROW_PADDING,
+        self.grid_clean_share_gauge = ExceedableLimitGauge(
+            "Clean %",
+            full_width,
+            display_group,
+            self.palette,
+            rows[1],
         )
-        display_group.append(self.grid_clean_share_gauge)
-
-        capacity_tick = self._vertical_line(
-            x=full_width - OVER_LIMIT_WIDTH,
-            y=rows[1],
-        )
-        display_group.append(capacity_tick)
-
-        display_group.append(self._metric_label("Clean %", y=rows[1]))
 
         # price
 
-        self.energy_usage_gauge = vectorio.Rectangle(
-            pixel_shader=self.palette,
-            color_index=GRAY,
-            width=1,
-            height=BAR_HEIGHT,
-            x=TEXT_COLUMN_WIDTH,
-            y=rows[2] + BAR_PADDING + ROW_PADDING,
+        self.energy_usage_gauge = ExceedableLimitGauge(
+            "Price",
+            full_width,
+            display_group,
+            self.palette,
+            rows[2],
+            left_label=self._price_label_text(tier1_price_centicents),
+            right_label=self._price_label_text(tier2_price_centicents),
         )
-        display_group.append(self.energy_usage_gauge)
-
-        tier1_limit_tick = self._vertical_line(
-            x=full_width - OVER_LIMIT_WIDTH,
-            y=rows[2],
-        )
-        display_group.append(tier1_limit_tick)
-
-        display_group.append(self._metric_label("Price", y=rows[2]))
-
-        self.display.root_group = display_group
 
     def _price_label_text(self, price_centicents):
         """Return a string representation of the price in cents per kWh."""
         return f"{price_centicents/100:.2f} $/kWh"
 
-    def _bar_length_by_percent(self, percentage):
-        """Return the length of the bar in pixels given a percentage."""
-        theoretical = int((self.display.width - TEXT_COLUMN_WIDTH - OVER_LIMIT_WIDTH) * percentage/100)
 
-        return max(1, theoretical)
+class ExceedableLimitGauge:
+    def __init__(
+        self,
+        name: str,
+        full_width: int,
+        display_group: displayio.Group,
+        palette: displayio.Palette,
+        y_offset: int,
+        left_label: str | None = None,
+        right_label: str | None = None,
+    ) -> None:
+        self.full_width = full_width
+        self.palette = palette
+
+        self.rectangle = vectorio.Rectangle(
+            pixel_shader=palette,
+            color_index=GRAY,
+            width=1,
+            height=BAR_HEIGHT,
+            x=TEXT_COLUMN_WIDTH,
+            y=y_offset + BAR_PADDING + ROW_PADDING,
+        )
+        display_group.append(self.rectangle)
+
+        self.limit_line = self._vertical_line(
+            x=self.full_width - OVER_LIMIT_WIDTH,
+            y=y_offset,
+        )
+        display_group.append(self.limit_line)
+
+        display_group.append(self._metric_label(name, y=y_offset))
+
+        if left_label:
+            display_group.append(self._metric_label(left_label, x=TEXT_COLUMN_WIDTH + ROW_PADDING, y=y_offset))
+
+        if right_label:
+            display_group.append(
+                self._metric_label(right_label, x=self.full_width - ROW_PADDING, y=y_offset, anchor_point=(1, 0.5))
+            )
+
+    def update(self, value, limit):
+        percentage = value / limit * 100
+        self.rectangle.width = self._bar_length_by_percent(percentage)
 
     def _vertical_line(self, x, y, color=WHITE):
         """Return a vertical line at the given x coordinate."""
@@ -169,6 +164,12 @@ class Dashboard:
             terminalio.FONT,
             text=text,
             color=WHITE_HEX,
-            anchored_position=(x, y + ROW_HEIGHT//2),
+            anchored_position=(x, y + ROW_HEIGHT // 2),
             anchor_point=anchor_point,
         )
+
+    def _bar_length_by_percent(self, percentage):
+        """Return the length of the bar in pixels given a percentage."""
+        theoretical = int((self.full_width - TEXT_COLUMN_WIDTH - OVER_LIMIT_WIDTH) * percentage / 100)
+
+        return max(1, theoretical)
