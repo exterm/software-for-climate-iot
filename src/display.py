@@ -140,23 +140,6 @@ class Dashboard:
 
         display_group.append(self._metric_label("Price", y=rows[2]))
 
-        # render the Tier 1 price over the left half of the gauge
-        tier1_price = self._metric_label(
-            text=self._price_label_text(tier1_price_centicents),
-            x=TEXT_COLUMN_WIDTH + ROW_PADDING,
-            y=rows[2],
-        )
-        display_group.append(tier1_price)
-
-        # render the Tier 2 price over the right half of the gauge
-        tier2_price = self._metric_label(
-            text=self._price_label_text(tier2_price_centicents),
-            x=full_width - ROW_PADDING,
-            y=rows[2],
-            anchor_point=(1, 0.5),
-        )
-        display_group.append(tier2_price)
-
         self.display.root_group = display_group
 
     def _price_label_text(self, price_centicents):

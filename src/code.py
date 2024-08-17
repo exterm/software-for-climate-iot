@@ -23,7 +23,7 @@ LOW_POWER_TEMP_OFFSET = 2.5
 
 TIER1_PRICE = 1030
 TIER2_PRICE = 1250
-TIER1_LIMIT = 750
+TIER1_LIMIT = 600
 
 # This controls how often your device sends data to the database
 INTERVAL_S = 60
