@@ -125,10 +125,8 @@ while True:
 
     dashboard_data = fetch.get_dashboard_data(requests, ELECTRICITYMAPS_ZONE)
     dashboard.update(
-        grid_intensity_g_kwh=dashboard_data["latest_carbon_intensity"],
-        average_grid_intensity_g_kwh=dashboard_data["average_carbon_intensity"],
-        demand_MW=dashboard_data["latest_power_consumption"],
-        average_demand_MW=dashboard_data["average_power_consumption"],
+        carbon_intensity_history=dashboard_data["carbon_intensity_history"],
+        power_consumption_history=dashboard_data["power_consumption_history"],
         energy_usage_kwh=0,
     )
 

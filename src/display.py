@@ -1,3 +1,11 @@
+from framebufferio import FramebufferDisplay
+import vectorio
+import displayio
+from adafruit_display_text.bitmap_label import Label
+import terminalio
+import math
+
+
 GREEN = 0
 YELLOW = 1
 RED = 2
@@ -18,13 +26,6 @@ ROW_PADDING: int = 5
 ROW_HEIGHT: int = BAR_HEIGHT + 2 * BAR_PADDING + 2 * ROW_PADDING
 TEXT_COLUMN_WIDTH: int = 45
 OVER_LIMIT_WIDTH: int = 75
-
-from framebufferio import FramebufferDisplay
-import vectorio
-import displayio
-from adafruit_display_text.bitmap_label import Label
-import terminalio
-
 
 class Dashboard:
     """
@@ -91,16 +92,14 @@ class Dashboard:
 
     def update(
         self,
-        grid_intensity_g_kwh=0,
-        average_grid_intensity_g_kwh=0,
-        demand_MW=0,
-        average_demand_MW=0,
+        carbon_intensity_history: list[int] = [],
+        power_consumption_history: list[int] = [],
         energy_usage_kwh=0,
     ):
         """Update the dashboard with the latest data."""
-        self.grid_intensity_gauge.update(grid_intensity_g_kwh, average_grid_intensity_g_kwh)
+        self.grid_intensity_gauge.update_from_history(carbon_intensity_history)
 
-        self.demand_gauge.update(demand_MW, average_demand_MW)
+        self.demand_gauge.update_from_history(power_consumption_history)
 
         self.energy_usage_gauge.update(energy_usage_kwh, self.tier1_limit)
 
@@ -118,6 +117,7 @@ class ExceedableLimitGauge:
     ) -> None:
         self.full_width = full_width
         self.palette = palette
+        self.name = name
 
         self.rectangle = vectorio.Rectangle(
             pixel_shader=palette,
@@ -149,8 +149,6 @@ class ExceedableLimitGauge:
         percentage = value / limit * 100
         self.rectangle.width = self._bar_length_by_percentage(percentage)
 
-        return percentage
-
     def _vertical_line(self, x, y, color=WHITE):
         """Return a vertical line at the given x coordinate."""
         return vectorio.Rectangle(
@@ -178,15 +176,27 @@ class ExceedableLimitGauge:
 
         return max(1, theoretical)
 
-class VsAverageGauge(ExceedableLimitGauge):
-    def update(self, value, limit):
-        percentage = super().update(value, limit)
-        self.rectangle.color_index = self._color_by_percentage(percentage)
 
-    def _color_by_percentage(self, percentage):
+class VsAverageGauge(ExceedableLimitGauge):
+    def __init__(self, name, full_width, display_group, palette, y_offset, left_label=None, right_label=None):
+        super().__init__(name, full_width, display_group, palette, y_offset)
+
+
+    def update_from_history(self, history: list[int]):
+        current_value = history[0]
+        average = sum(history) // len(history)
+        sample_variance = sum((x - average) ** 2 for x in history) // len(history)
+        std_dev = math.sqrt(sample_variance)
+
+        print(f"{self.name}: {current_value=} {average=} {std_dev=}")
+
+        self.update(current_value, average)
+        self.rectangle.color_index = self._color_by_variance(current_value, std_dev, average)
+
+    def _color_by_variance(self, value, std_dev, average):
         """Return the color of the bar given a percentage."""
-        if percentage < 90:
+        if value < average - std_dev:
             return GREEN
-        if percentage < 110:
+        if value < average + std_dev:
             return YELLOW
         return RED

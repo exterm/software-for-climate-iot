@@ -25,20 +25,11 @@ def get_dashboard_data(requests: adafruit_requests.Session, zone: str):
 
     data = response.json()[0]
 
-    latest_carbon_intensity = data["carbon_intensity_raw"]["history"][0]["carbonIntensity"]
-    average_carbon_intensity = sum(
-        [x["carbonIntensity"] for x in data["carbon_intensity_raw"]["history"]]
-    ) / len(data["carbon_intensity_raw"]["history"])
+    carbon_intensity_history: list[int] = [row["carbonIntensity"] for row in data["carbon_intensity_raw"]["history"]]
 
-    latest_power_consumption = data["power_breakdown_raw"]["history"][0]["powerConsumptionTotal"]
-    average_power_consumption = sum(
-        [x["powerConsumptionTotal"] for x in data["power_breakdown_raw"]["history"]]
-    ) / len(data["power_breakdown_raw"]["history"])
+    power_consumption_history: list[int] = [row["powerConsumptionTotal"] for row in data["power_breakdown_raw"]["history"]]
 
     return {
-        "latest_carbon_intensity": latest_carbon_intensity,
-        "average_carbon_intensity": average_carbon_intensity,
-        "latest_power_consumption": latest_power_consumption,
-        "average_power_consumption": average_power_consumption,
+        "carbon_intensity_history": carbon_intensity_history,
+        "power_consumption_history": power_consumption_history,
     }
-
