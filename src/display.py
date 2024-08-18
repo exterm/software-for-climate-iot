@@ -27,6 +27,7 @@ ROW_HEIGHT: int = BAR_HEIGHT + 2 * BAR_PADDING + 2 * ROW_PADDING
 TEXT_COLUMN_WIDTH: int = 45
 OVER_LIMIT_WIDTH: int = 75
 
+
 class Dashboard:
     """
     Display a personalized power supply dashboard from precomputed values.
@@ -155,7 +156,7 @@ class ExceedableLimitGauge:
             pixel_shader=self.palette,
             color_index=color,
             width=1,
-            height=ROW_HEIGHT - ROW_PADDING,
+            height=ROW_HEIGHT - 2 * ROW_PADDING,
             x=x,
             y=y + ROW_PADDING,
         )
@@ -181,6 +182,27 @@ class VsAverageGauge(ExceedableLimitGauge):
     def __init__(self, name, full_width, display_group, palette, y_offset, left_label=None, right_label=None):
         super().__init__(name, full_width, display_group, palette, y_offset)
 
+        self.rectangle.color_index = GREEN
+
+        self.close_rectangle = vectorio.Rectangle(
+            pixel_shader=palette,
+            color_index=BLACK,
+            width=1,
+            height=BAR_HEIGHT,
+            x=full_width + 1,
+            y=y_offset + BAR_PADDING + ROW_PADDING,
+        )
+        display_group.append(self.close_rectangle)
+
+        self.over_rectangle = vectorio.Rectangle(
+            pixel_shader=palette,
+            color_index=BLACK,
+            width=1,
+            height=BAR_HEIGHT,
+            x=full_width + 1,
+            y=y_offset + BAR_PADDING + ROW_PADDING,
+        )
+        display_group.append(self.over_rectangle)
 
     def update_from_history(self, history: list[int]):
         current_value = history[0]
@@ -190,13 +212,44 @@ class VsAverageGauge(ExceedableLimitGauge):
 
         print(f"{self.name}: {current_value=} {average=} {std_dev=}")
 
-        self.update(current_value, average)
-        self.rectangle.color_index = self._color_by_variance(current_value, std_dev, average)
+        good_up_to, bad_from = self._boundaries(average, std_dev)
 
-    def _color_by_variance(self, value, std_dev, average):
-        """Return the color of the bar given a percentage."""
-        if value < average - std_dev:
-            return GREEN
-        if value < average + std_dev:
-            return YELLOW
-        return RED
+        # "good" bar
+        good_width = self._bar_length_by_relative_value(current_value, average, 0, good_up_to)
+        self.rectangle.width = max(1, good_width)
+
+        # "close" bar
+        close_width = self._bar_length_by_relative_value(current_value, average, good_up_to, bad_from)
+
+        if close_width == 0:
+            self.close_rectangle.color_index = BLACK
+            self.close_rectangle.x = self.full_width + 1
+        else:
+            self.close_rectangle.color_index = YELLOW
+            self.close_rectangle.width = close_width
+            self.close_rectangle.x = good_width + TEXT_COLUMN_WIDTH
+
+        # "over" bar
+        over_width = self._bar_length_by_relative_value(current_value, average, bad_from)
+
+        if over_width == 0:
+            self.over_rectangle.color_index = BLACK
+            self.over_rectangle.x = self.full_width + 1
+        else:
+            self.over_rectangle.color_index = RED
+            self.over_rectangle.width = over_width
+            self.over_rectangle.x = good_width + close_width + TEXT_COLUMN_WIDTH
+
+    def _boundaries(self, average, std_dev):
+        """Return the boundaries of the bar given an average and standard deviation."""
+        return average - std_dev, average + std_dev
+
+    def _bar_length_by_relative_value(self, value, comparison, lower_bound, upper_bound=None):
+        """Return the width of the bar given a value and a comparison value."""
+        if value <= lower_bound:
+            return 0
+
+        if upper_bound and value >= upper_bound:
+            value = upper_bound
+
+        return self._bar_length_by_percentage((value - lower_bound) / comparison * 100)
