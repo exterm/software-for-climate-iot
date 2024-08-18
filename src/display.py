@@ -63,6 +63,7 @@ class Dashboard:
             display_group,
             palette,
             rows[0],
+            "gCO2e/kWh",
         )
 
         # grid stress
@@ -73,6 +74,7 @@ class Dashboard:
             display_group,
             palette,
             rows[1],
+            "MW",
         )
 
         # price
@@ -120,6 +122,12 @@ class ExceedableLimitGauge:
         self.palette = palette
         self.name = name
 
+        self.limit_line = self._vertical_line(
+            x=self.full_width - OVER_LIMIT_WIDTH,
+            y=y_offset,
+        )
+        display_group.append(self.limit_line)
+
         self.rectangle = vectorio.Rectangle(
             pixel_shader=palette,
             color_index=GRAY,
@@ -130,21 +138,15 @@ class ExceedableLimitGauge:
         )
         display_group.append(self.rectangle)
 
-        self.limit_line = self._vertical_line(
-            x=self.full_width - OVER_LIMIT_WIDTH,
-            y=y_offset,
-        )
-        display_group.append(self.limit_line)
-
         display_group.append(self._metric_label(name, y=y_offset))
 
-        if left_label:
-            display_group.append(self._metric_label(left_label, x=TEXT_COLUMN_WIDTH + ROW_PADDING, y=y_offset))
+        if left_label is not None:
+            self.left_label = self._metric_label(left_label, x=TEXT_COLUMN_WIDTH + ROW_PADDING, y=y_offset)
+            display_group.append(self.left_label)
 
-        if right_label:
-            display_group.append(
-                self._metric_label(right_label, x=self.full_width - ROW_PADDING, y=y_offset, anchor_point=(1, 0.5))
-            )
+        if right_label is not None:
+            self.right_label = self._metric_label(right_label, x=self.full_width - ROW_PADDING, y=y_offset, anchor_point=(1, 0.5))
+            display_group.append(self.right_label)
 
     def update(self, value, limit):
         percentage = value / limit * 100
@@ -155,7 +157,7 @@ class ExceedableLimitGauge:
         return vectorio.Rectangle(
             pixel_shader=self.palette,
             color_index=color,
-            width=1,
+            width=2,
             height=ROW_HEIGHT - 2 * ROW_PADDING,
             x=x,
             y=y + ROW_PADDING,
@@ -179,8 +181,9 @@ class ExceedableLimitGauge:
 
 
 class VsAverageGauge(ExceedableLimitGauge):
-    def __init__(self, name, full_width, display_group, palette, y_offset, left_label=None, right_label=None):
-        super().__init__(name, full_width, display_group, palette, y_offset)
+    def __init__(self, name, full_width, display_group, palette, y_offset, unit):
+        super().__init__(name, full_width, display_group, palette, y_offset, "")
+        self.unit = unit
 
         self.rectangle.color_index = GREEN
 
@@ -211,6 +214,8 @@ class VsAverageGauge(ExceedableLimitGauge):
         std_dev = math.sqrt(sample_variance)
 
         print(f"{self.name}: {current_value=} {average=} {std_dev=}")
+
+        self.left_label.text = f"{current_value} {self.unit}"
 
         good_up_to, bad_from = self._boundaries(average, std_dev)
 
