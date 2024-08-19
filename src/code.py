@@ -31,13 +31,13 @@ TIER1_LIMIT = 600
 # This controls how often your device sends data to the database
 INTERVAL_S = 60
 
+
 # Prepare to use the internet 💫
 def initialize_wifi_connection():
     # This is inside a function so that we can call it later if we need to reestablish
     # the connection.
-    wifi.radio.connect(
-        os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD")
-    )
+    wifi.radio.connect(os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD"))
+
 
 def initialize_sensors():
     """Initialize connections to each possible sensor, if connected"""
@@ -65,6 +65,7 @@ def initialize_sensors():
 
     # return air_quality_sensor, co2_sensor, temperature_sensor, battery_sensor
     return co2_sensor, battery_sensor
+
 
 def collect_data(co2_sensor, battery_sensor):
     """Get the latest data from the sensors, display it, and record it in the cloud."""
@@ -95,6 +96,7 @@ def collect_data(co2_sensor, battery_sensor):
         )
 
     return all_sensor_data
+
 
 display = board.DISPLAY
 display.brightness = 0.1
@@ -127,7 +129,10 @@ while True:
     dashboard.update(
         carbon_intensity_history=dashboard_data["carbon_intensity_history"],
         power_consumption_history=dashboard_data["power_consumption_history"],
-        energy_usage_kwh=0,
+        energy_usage_kwh=dashboard_data["philip_utility_data"]["energy_usage_kwh"],
+        tier_limit=dashboard_data["philip_utility_data"]["tier_limit"],
+        tier1_price=dashboard_data["philip_utility_data"]["tier1_price"] * 1000,
+        tier2_price=dashboard_data["philip_utility_data"]["tier2_price"] * 1000,
     )
 
     time.sleep(INTERVAL_S)

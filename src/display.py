@@ -80,7 +80,7 @@ class Dashboard:
         # price
 
         self.energy_usage_gauge = ExceedableLimitGauge(
-            "Price",
+            "Usage",
             full_width,
             display_group,
             palette,
@@ -98,6 +98,9 @@ class Dashboard:
         carbon_intensity_history: list[int] = [],
         power_consumption_history: list[int] = [],
         energy_usage_kwh=0,
+        tier_limit=0,
+        tier1_price=0,
+        tier2_price=0,
     ):
         """Update the dashboard with the latest data."""
         self.grid_intensity_gauge.update_from_history(carbon_intensity_history)
