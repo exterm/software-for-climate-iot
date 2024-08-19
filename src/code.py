@@ -122,6 +122,7 @@ co2_alert_handler: CO2Alert = CO2Alert(
 
 while True:
     data = collect_data(co2_sensor, battery_sensor)
+    print(data)
     co2_ppm = data.get("co2_ppm", 0)
     co2_alert_handler.alert_maybe(co2_ppm)
 
