@@ -22,7 +22,6 @@ if ELECTRICITYMAPS_ZONE == "":
     raise ValueError("ELECTRICITYMAPS_ZONE environment variable is not set")
 
 LOW_POWER_MODE = True
-LOW_POWER_TEMP_OFFSET = 2.5
 
 TIER1_PRICE = 1030
 TIER2_PRICE = 1250
@@ -82,10 +81,7 @@ def collect_data(co2_sensor, battery_sensor):
         )
 
     if co2_sensor and co2_sensor.data_ready:
-        if LOW_POWER_MODE:
-            temp = co2_sensor.temperature + LOW_POWER_TEMP_OFFSET
-        else:
-            temp = co2_sensor.temperature
+        temp = co2_sensor.temperature
 
         all_sensor_data.update(
             {
