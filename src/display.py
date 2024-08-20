@@ -212,22 +212,20 @@ class VsAverageGauge(ExceedableLimitGauge):
 
     def update_from_history(self, history: list[int]):
         current_value = history[0]
-        average = sum(history) // len(history)
-        sample_variance = sum((x - average) ** 2 for x in history) // len(history)
-        std_dev = math.sqrt(sample_variance)
+        median = self._calculate_percentile(history, 0.5)
+        good_up_to = self._calculate_percentile(history, 0.4)
+        bad_from = self._calculate_percentile(history, 0.6)
 
-        print(f"{self.name}: {current_value=} {average=} {std_dev=}")
+        print(f"{self.name}: {current_value=} {median=} {good_up_to=} {bad_from=}")
 
         self.left_label.text = f"{current_value} {self.unit}"
 
-        good_up_to, bad_from = self._boundaries(average, std_dev)
-
         # "good" bar
-        good_width = self._bar_length_by_relative_value(current_value, average, 0, good_up_to)
+        good_width = self._bar_length_by_relative_value(current_value, median, 0, good_up_to)
         self.rectangle.width = max(1, good_width)
 
         # "close" bar
-        close_width = self._bar_length_by_relative_value(current_value, average, good_up_to, bad_from)
+        close_width = self._bar_length_by_relative_value(current_value, median, good_up_to, bad_from)
 
         if close_width == 0:
             self.close_rectangle.color_index = BLACK
@@ -238,7 +236,7 @@ class VsAverageGauge(ExceedableLimitGauge):
             self.close_rectangle.x = good_width + TEXT_COLUMN_WIDTH
 
         # "over" bar
-        over_width = self._bar_length_by_relative_value(current_value, average, bad_from)
+        over_width = self._bar_length_by_relative_value(current_value, median, bad_from)
 
         if over_width == 0:
             self.over_rectangle.color_index = BLACK
@@ -247,10 +245,6 @@ class VsAverageGauge(ExceedableLimitGauge):
             self.over_rectangle.color_index = RED
             self.over_rectangle.width = over_width
             self.over_rectangle.x = good_width + close_width + TEXT_COLUMN_WIDTH
-
-    def _boundaries(self, average, std_dev):
-        """Return the boundaries of the bar given an average and standard deviation."""
-        return average - std_dev, average + std_dev
 
     def _bar_length_by_relative_value(self, value, comparison, lower_bound, upper_bound=None):
         """Return the width of the bar given a value and a comparison value."""
@@ -261,3 +255,16 @@ class VsAverageGauge(ExceedableLimitGauge):
             value = upper_bound
 
         return self._bar_length_by_percentage((value - lower_bound) / comparison * 100)
+
+    def _calculate_percentile(self, data, percentile):
+        data = sorted(data)
+        theoretical_index = (len(data) - 1) * percentile
+        lower_index = int(theoretical_index)
+        upper_index = lower_index + 1
+
+        if upper_index >= len(data):
+            return data[lower_index]
+        lower_value = data[lower_index]
+        upper_value = data[upper_index]
+
+        return lower_value + (upper_value - lower_value) * (theoretical_index - lower_index)
