@@ -58,12 +58,12 @@ class Dashboard:
         # carbon intensity
 
         self.grid_intensity_gauge = VsAverageGauge(
-            "Carbon",
+            "CO2e",
             full_width,
             display_group,
             palette,
             rows[0],
-            "gCO2e/kWh",
+            "g/kWh",
         )
 
         # grid stress
@@ -85,8 +85,7 @@ class Dashboard:
             display_group,
             palette,
             rows[2],
-            left_label=self._price_label_text(tier1_price_centicents),
-            right_label=self._price_label_text(tier2_price_centicents),
+            "kWh",
         )
 
     def _price_label_text(self, price_centicents):
@@ -110,7 +109,7 @@ class Dashboard:
         self.energy_usage_gauge.update(energy_usage_kwh, self.tier1_limit)
 
 
-class ExceedableLimitGauge:
+class Gauge:
     def __init__(
         self,
         name: str,
@@ -124,12 +123,6 @@ class ExceedableLimitGauge:
         self.full_width = full_width
         self.palette = palette
         self.name = name
-
-        self.limit_line = self._vertical_line(
-            x=self.full_width - OVER_LIMIT_WIDTH,
-            y=y_offset,
-        )
-        display_group.append(self.limit_line)
 
         self.rectangle = vectorio.Rectangle(
             pixel_shader=palette,
@@ -182,8 +175,25 @@ class ExceedableLimitGauge:
 
         return max(1, theoretical)
 
+class ExceedableLimitGauge(Gauge):
+    def __init__(self, name, full_width, display_group, palette, y_offset, unit):
+        self.unit = unit
 
-class VsAverageGauge(ExceedableLimitGauge):
+        super().__init__(name, full_width, display_group, palette, y_offset, "")
+
+        self.limit_line = self._vertical_line(
+            x=full_width - OVER_LIMIT_WIDTH,
+            y=y_offset,
+        )
+        display_group.append(self.limit_line)
+
+    def update(self, value, limit):
+        super().update(value, limit)
+
+        self.left_label.text = f"{value} {self.unit}"
+
+
+class VsAverageGauge(Gauge):
     def __init__(self, name, full_width, display_group, palette, y_offset, unit):
         super().__init__(name, full_width, display_group, palette, y_offset, "")
         self.unit = unit
