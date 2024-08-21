@@ -7,27 +7,20 @@ if SUPABASE_URL == "":
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 def get_dashboard_data(requests: adafruit_requests.Session, zone: str):
-    """
-    Fetch the latest data from the API directly from raw data.
-    Compute display values from raw data.
-    """
+    """Fetch the latest data for the dashboard."""
 
-    # get the latest row in the electricitymaps-hourly table for each zone (where testing is false)
     response = requests.get(
-        f"{SUPABASE_URL}/rest/v1/electricitymaps-hourly?" +
-            "select=carbon_intensity_raw,power_breakdown_raw&order=created_at.desc&limit=1" +
-            f"&testing=neq.True&zone=eq.{zone}",
+        f"{SUPABASE_URL}/rest/v1/dashboard-snapshots?select=data&order=id.desc&limit=1&testing=neq.True&zone=eq.{zone}",
         headers={"apikey": SUPABASE_KEY},
     )
 
     if response.status_code != 200:
-        raise ValueError(f"Failed to fetch electricitymaps data: {response.status_code}. Error: {response.json()}")
+        raise ValueError(f"Failed to fetch data: {response.status_code}")
 
     data = response.json()[0]
 
-    carbon_intensity_history: list[int] = [row["carbonIntensity"] for row in data["carbon_intensity_raw"]["history"]]
-
-    power_consumption_history: list[int] = [row["powerConsumptionTotal"] for row in data["power_breakdown_raw"]["history"]]
+    carbon_intensity_history = data["data"]["carbon_intensity_history"]
+    power_consumption_history = data["data"]["power_breakdown_history"]
 
     # utility data for Philip
     response = requests.get(
@@ -46,6 +39,7 @@ def get_dashboard_data(requests: adafruit_requests.Session, zone: str):
     tier_limit = data["data"]["tiered_pricing_data"]["tierThreshold"]
     tier1_price = data["data"]["tiered_pricing_data"]["tier1Rate"]
     tier2_price = data["data"]["tiered_pricing_data"]["tier2Rate"]
+
 
     return {
         "carbon_intensity_history": carbon_intensity_history,
