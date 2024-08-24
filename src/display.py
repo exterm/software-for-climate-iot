@@ -3,7 +3,6 @@ import vectorio
 import displayio
 from adafruit_display_text.bitmap_label import Label
 import terminalio
-import math
 
 
 GREEN = 0
@@ -26,6 +25,9 @@ ROW_PADDING: int = 5
 ROW_HEIGHT: int = BAR_HEIGHT + 2 * BAR_PADDING + 2 * ROW_PADDING
 TEXT_COLUMN_WIDTH: int = 45
 OVER_LIMIT_WIDTH: int = 75
+
+DAYS_HISTORY = 2
+HOURS_PER_DAY = 24
 
 
 class Dashboard:
@@ -222,6 +224,10 @@ class VsAverageGauge(Gauge):
 
     def update_from_history(self, history: list[int]):
         current_value = history[-1]
+
+        # restrict history
+        history = history[-DAYS_HISTORY*HOURS_PER_DAY:]
+
         median = self._calculate_percentile(history, 0.5)
         good_up_to = self._calculate_percentile(history, 0.4)
         bad_from = self._calculate_percentile(history, 0.6)
