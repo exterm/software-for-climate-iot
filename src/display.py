@@ -221,7 +221,7 @@ class VsAverageGauge(Gauge):
         display_group.append(self.over_rectangle)
 
     def update_from_history(self, history: list[int]):
-        current_value = history[0]
+        current_value = history[-1]
         median = self._calculate_percentile(history, 0.5)
         good_up_to = self._calculate_percentile(history, 0.4)
         bad_from = self._calculate_percentile(history, 0.6)
