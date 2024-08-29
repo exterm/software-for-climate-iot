@@ -26,7 +26,6 @@ ROW_HEIGHT: int = BAR_HEIGHT + 2 * BAR_PADDING + 2 * ROW_PADDING
 TEXT_COLUMN_WIDTH: int = 45
 OVER_LIMIT_WIDTH: int = 75
 
-DAYS_HISTORY = 7
 HOURS_PER_DAY = 24
 
 
@@ -225,23 +224,26 @@ class VsAverageGauge(Gauge):
     def update_from_history(self, history: list[int]):
         current_value = history[-1]
 
-        # restrict history
-        history = history[-DAYS_HISTORY*HOURS_PER_DAY:]
+        restricted_history = history[-HOURS_PER_DAY:]
 
-        median = self._calculate_percentile(history, 0.5)
-        good_up_to = self._calculate_percentile(history, 0.4)
-        bad_from = self._calculate_percentile(history, 0.6)
+        week_median = self._calculate_percentile(history, 0.5)
+        day_median = self._calculate_percentile(restricted_history, 0.5)
 
-        print(f"{self.name}: {current_value=} {median=} {good_up_to=} {bad_from=}")
+        good_up_to = min(week_median, day_median)
+        bad_from = max(week_median, day_median)
+
+        center = (good_up_to + bad_from) / 2
+
+        print(f"{self.name}: {current_value=} {week_median=} {day_median=}")
 
         self.left_label.text = f"{current_value} {self.unit}"
 
         # "good" bar
-        good_width = self._bar_length_by_relative_value(current_value, median, 0, good_up_to)
+        good_width = self._bar_length_by_relative_value(current_value, center, 0, good_up_to)
         self.rectangle.width = max(1, good_width)
 
         # "close" bar
-        close_width = self._bar_length_by_relative_value(current_value, median, good_up_to, bad_from)
+        close_width = self._bar_length_by_relative_value(current_value, center, good_up_to, bad_from)
 
         if close_width == 0:
             self.close_rectangle.color_index = BLACK
@@ -252,7 +254,7 @@ class VsAverageGauge(Gauge):
             self.close_rectangle.x = good_width + TEXT_COLUMN_WIDTH
 
         # "over" bar
-        over_width = self._bar_length_by_relative_value(current_value, median, bad_from)
+        over_width = self._bar_length_by_relative_value(current_value, center, bad_from)
 
         if over_width == 0:
             self.over_rectangle.color_index = BLACK
