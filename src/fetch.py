@@ -36,7 +36,7 @@ def get_dashboard_data(requests: adafruit_requests.Session, zone: str):
     data = response.json()[0]
 
     energy_usage_kwh = data["data"]["total_usage"]
-    tier_limit = data["data"]["tiered_pricing_data"]["tierThreshold"]
+    tier_limit = data["data"]["tiered_pricing_data"]["residentialThreshold"]
     tier1_price = data["data"]["tiered_pricing_data"]["tier1Rate"]
     tier2_price = data["data"]["tiered_pricing_data"]["tier2Rate"]
 
