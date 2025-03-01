@@ -1,4 +1,4 @@
-.PHONY: deploy shell clean install-libraries
+.PHONY: deploy shell clean install-libraries update-libraries
 
 DEVICE_PATH = /run/media/philip/CIRCUITPY
 DEVICE_ADDRESS = /dev/ttyACM0
@@ -32,6 +32,6 @@ clean:
 install-libraries:
 	@circup install -r requirements.txt
 
-.PHONY: requirements.txt
-requirements.txt:
+update-libraries:
+	@circup update
 	@circup freeze -r
