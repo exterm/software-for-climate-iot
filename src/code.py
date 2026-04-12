@@ -24,8 +24,6 @@ if ELECTRICITYMAPS_ZONE == "":
 LOW_POWER_MODE = True
 LOW_POWER_TEMP_OFFSET = 2.5
 
-TIER1_PRICE = 1200
-TIER2_PRICE = 1420
 TIER1_LIMIT = 600
 
 # This controls how often your device sends data to the database
@@ -104,7 +102,7 @@ def collect_data(co2_sensor, battery_sensor):
 display = board.DISPLAY
 display.brightness = 0.1
 
-dashboard = Dashboard(display, TIER1_PRICE, TIER2_PRICE, TIER1_LIMIT)
+dashboard = Dashboard(display, TIER1_LIMIT)
 
 initialize_wifi_connection()
 pool = socketpool.SocketPool(wifi.radio)

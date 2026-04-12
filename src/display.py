@@ -39,7 +39,7 @@ class Dashboard:
     - current energy price per kWh based on tiered pricing and cumulative usage
     """
 
-    def __init__(self, display: FramebufferDisplay, tier1_price_centicents, tier2_price_centicents, tier1_limit):
+    def __init__(self, display: FramebufferDisplay, tier1_limit):
         self.tier1_limit: int = tier1_limit
 
         palette = displayio.Palette(6)
