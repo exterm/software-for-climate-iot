@@ -184,6 +184,38 @@ class Gauge:
 
         return max(1, theoretical)
 
+    def _init_tricolor_segments(self, display_group, y_offset):
+        """Turn this gauge's primary bar green and add yellow/red follow-on segments."""
+        self.rectangle.color_index = GREEN
+        self.yellow_rectangle = self._segment_rectangle(y_offset)
+        self.red_rectangle = self._segment_rectangle(y_offset)
+        display_group.append(self.yellow_rectangle)
+        display_group.append(self.red_rectangle)
+
+    def _segment_rectangle(self, y_offset):
+        return vectorio.Rectangle(
+            pixel_shader=self.palette,
+            color_index=BLACK,
+            width=1,
+            height=BAR_HEIGHT,
+            x=self.full_width + 1,
+            y=y_offset + BAR_PADDING + ROW_PADDING,
+        )
+
+    def _render_tricolor(self, green_width, yellow_width, red_width):
+        self.rectangle.width = max(1, green_width)
+        self._place_segment(self.yellow_rectangle, YELLOW, yellow_width, TEXT_COLUMN_WIDTH + green_width)
+        self._place_segment(self.red_rectangle, RED, red_width, TEXT_COLUMN_WIDTH + green_width + yellow_width)
+
+    def _place_segment(self, rect, color, width, x):
+        if width <= 0:
+            rect.color_index = BLACK
+            rect.x = self.full_width + 1
+        else:
+            rect.color_index = color
+            rect.width = width
+            rect.x = x
+
 class ExceedableLimitGauge(Gauge):
     def __init__(self, name, full_width, display_group, palette, y_offset, unit):
         self.unit = unit
@@ -207,27 +239,7 @@ class VsAverageGauge(Gauge):
         super().__init__(name, full_width, display_group, palette, y_offset, "")
         self.unit = unit
 
-        self.rectangle.color_index = GREEN
-
-        self.close_rectangle = vectorio.Rectangle(
-            pixel_shader=palette,
-            color_index=BLACK,
-            width=1,
-            height=BAR_HEIGHT,
-            x=full_width + 1,
-            y=y_offset + BAR_PADDING + ROW_PADDING,
-        )
-        display_group.append(self.close_rectangle)
-
-        self.over_rectangle = vectorio.Rectangle(
-            pixel_shader=palette,
-            color_index=BLACK,
-            width=1,
-            height=BAR_HEIGHT,
-            x=full_width + 1,
-            y=y_offset + BAR_PADDING + ROW_PADDING,
-        )
-        display_group.append(self.over_rectangle)
+        self._init_tricolor_segments(display_group, y_offset)
 
     def update_from_history(self, history: list[int]):
         current_value = history[-1]
@@ -246,31 +258,11 @@ class VsAverageGauge(Gauge):
 
         self.left_label.text = f"{current_value} {self.unit}"
 
-        # "good" bar
         good_width = self._bar_length_by_relative_value(current_value, center, 0, good_up_to)
-        self.rectangle.width = max(1, good_width)
-
-        # "close" bar
         close_width = self._bar_length_by_relative_value(current_value, center, good_up_to, bad_from)
-
-        if close_width == 0:
-            self.close_rectangle.color_index = BLACK
-            self.close_rectangle.x = self.full_width + 1
-        else:
-            self.close_rectangle.color_index = YELLOW
-            self.close_rectangle.width = close_width
-            self.close_rectangle.x = good_width + TEXT_COLUMN_WIDTH
-
-        # "over" bar
         over_width = self._bar_length_by_relative_value(current_value, center, bad_from)
 
-        if over_width == 0:
-            self.over_rectangle.color_index = BLACK
-            self.over_rectangle.x = self.full_width + 1
-        else:
-            self.over_rectangle.color_index = RED
-            self.over_rectangle.width = over_width
-            self.over_rectangle.x = good_width + close_width + TEXT_COLUMN_WIDTH
+        self._render_tricolor(good_width, close_width, over_width)
 
     def _bar_length_by_relative_value(self, value, comparison, lower_bound, upper_bound=None):
         """Return the width of the bar given a value and a comparison value."""
@@ -305,27 +297,7 @@ class ThresholdGauge(Gauge):
 
         super().__init__(name, full_width, display_group, palette, y_offset, "")
 
-        self.rectangle.color_index = GREEN
-
-        self.yellow_rectangle = vectorio.Rectangle(
-            pixel_shader=palette,
-            color_index=BLACK,
-            width=1,
-            height=BAR_HEIGHT,
-            x=full_width + 1,
-            y=y_offset + BAR_PADDING + ROW_PADDING,
-        )
-        display_group.append(self.yellow_rectangle)
-
-        self.red_rectangle = vectorio.Rectangle(
-            pixel_shader=palette,
-            color_index=BLACK,
-            width=1,
-            height=BAR_HEIGHT,
-            x=full_width + 1,
-            y=y_offset + BAR_PADDING + ROW_PADDING,
-        )
-        display_group.append(self.red_rectangle)
+        self._init_tricolor_segments(display_group, y_offset)
 
     def update(self, value):
         self.left_label.text = f"{value} {self.unit}" if value else ""
@@ -338,21 +310,7 @@ class ThresholdGauge(Gauge):
         yellow_width = self._bar_length_for(yellow_end) - green_width
         red_width = self._bar_length_for(capped) - green_width - yellow_width
 
-        self.rectangle.width = max(1, green_width)
-
-        if yellow_width <= 0:
-            self.yellow_rectangle.x = self.full_width + 1
-        else:
-            self.yellow_rectangle.color_index = YELLOW
-            self.yellow_rectangle.width = yellow_width
-            self.yellow_rectangle.x = TEXT_COLUMN_WIDTH + green_width
-
-        if red_width <= 0:
-            self.red_rectangle.x = self.full_width + 1
-        else:
-            self.red_rectangle.color_index = RED
-            self.red_rectangle.width = red_width
-            self.red_rectangle.x = TEXT_COLUMN_WIDTH + green_width + yellow_width
+        self._render_tricolor(green_width, yellow_width, red_width)
 
     def _bar_length_for(self, value):
         return int((self.full_width - TEXT_COLUMN_WIDTH - ROW_PADDING) * value / self.full_scale)
