@@ -27,7 +27,7 @@ LOW_POWER_TEMP_OFFSET = 2.5
 TIER1_LIMIT = 600
 
 CO2_SAFE_UNDER = 800
-CO2_UNSAFE_OVER = 1000
+CO2_UNSAFE_OVER = 1200
 
 # This controls how often your device sends data to the database
 INTERVAL_S = 60
