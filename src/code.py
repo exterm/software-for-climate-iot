@@ -31,6 +31,8 @@ TIER1_LIMIT = 600
 # This controls how often your device sends data to the database
 INTERVAL_S = 60
 
+PHILIP_ALTITUDE_METERS = 70
+
 
 # Prepare to use the internet 💫
 def initialize_wifi_connection():
@@ -45,6 +47,7 @@ def initialize_sensors():
 
     try:
         co2_sensor = SCD4X(i2c)
+        co2_sensor.altitude = PHILIP_ALTITUDE_METERS
         print("Found SCD4X CO2, temp and humidity sensor")
         if LOW_POWER_MODE:
             co2_sensor.start_low_periodic_measurement()
