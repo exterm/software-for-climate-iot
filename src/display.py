@@ -89,6 +89,15 @@ class Dashboard:
             "kWh",
         )
 
+        self.co2_label = Label(
+            terminalio.FONT,
+            text="",
+            color=WHITE_HEX,
+            anchored_position=(full_width - ROW_PADDING, rows[2] + ROW_HEIGHT // 2),
+            anchor_point=(1, 0.5),
+        )
+        display_group.append(self.co2_label)
+
     def _price_label_text(self, price_centicents):
         """Return a string representation of the price in cents per kWh."""
         return f"{price_centicents/100:.2f} $/kWh"
@@ -101,6 +110,7 @@ class Dashboard:
         tier_limit=0,
         tier1_price=0,
         tier2_price=0,
+        co2_ppm=0,
     ):
         """Update the dashboard with the latest data."""
         self.grid_intensity_gauge.update_from_history(carbon_intensity_history)
@@ -108,6 +118,8 @@ class Dashboard:
         self.demand_gauge.update_from_history(power_consumption_history)
 
         self.energy_usage_gauge.update(energy_usage_kwh, self.tier1_limit)
+
+        self.co2_label.text = f"{co2_ppm} ppm" if co2_ppm else ""
 
 
 class Gauge:

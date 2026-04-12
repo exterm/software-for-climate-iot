@@ -137,6 +137,7 @@ while True:
         tier_limit=dashboard_data["philip_utility_data"]["tier_limit"],
         tier1_price=dashboard_data["philip_utility_data"]["tier1_price"] * 1000,
         tier2_price=dashboard_data["philip_utility_data"]["tier2_price"] * 1000,
+        co2_ppm=co2_ppm,
     )
 
     time.sleep(INTERVAL_S)
