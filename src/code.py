@@ -24,8 +24,8 @@ if ELECTRICITYMAPS_ZONE == "":
 LOW_POWER_MODE = True
 LOW_POWER_TEMP_OFFSET = 2.5
 
-TIER1_PRICE = 1030
-TIER2_PRICE = 1250
+TIER1_PRICE = 1200
+TIER2_PRICE = 1420
 TIER1_LIMIT = 600
 
 # This controls how often your device sends data to the database
