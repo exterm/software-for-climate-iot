@@ -26,6 +26,9 @@ LOW_POWER_TEMP_OFFSET = 2.5
 
 TIER1_LIMIT = 600
 
+CO2_SAFE_UNDER = 800
+CO2_UNSAFE_OVER = 1000
+
 # This controls how often your device sends data to the database
 INTERVAL_S = 60
 
@@ -102,7 +105,7 @@ def collect_data(co2_sensor, battery_sensor):
 display = board.DISPLAY
 display.brightness = 0.1
 
-dashboard = Dashboard(display, TIER1_LIMIT)
+dashboard = Dashboard(display, TIER1_LIMIT, CO2_SAFE_UNDER, CO2_UNSAFE_OVER)
 
 initialize_wifi_connection()
 pool = socketpool.SocketPool(wifi.radio)
@@ -117,8 +120,8 @@ time.sleep(5)
 
 co2_alert_handler: CO2Alert = CO2Alert(
     notifier=TwilioNotifier(requests),
-    co2_unsafe_over=1000,
-    co2_safe_under=800,
+    co2_unsafe_over=CO2_UNSAFE_OVER,
+    co2_safe_under=CO2_SAFE_UNDER,
 )
 
 while True:

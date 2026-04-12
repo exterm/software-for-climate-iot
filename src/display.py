@@ -19,9 +19,9 @@ BLACK_HEX = 0x000000
 WHITE_HEX = 0xFFFFFF
 GRAY_HEX = 0x9E9E9E
 
-BAR_PADDING: int = 5
-BAR_HEIGHT: int = 25
-ROW_PADDING: int = 5
+BAR_PADDING: int = 3
+BAR_HEIGHT: int = 17
+ROW_PADDING: int = 3
 ROW_HEIGHT: int = BAR_HEIGHT + 2 * BAR_PADDING + 2 * ROW_PADDING
 TEXT_COLUMN_WIDTH: int = 45
 OVER_LIMIT_WIDTH: int = 75
@@ -39,7 +39,7 @@ class Dashboard:
     - current energy price per kWh based on tiered pricing and cumulative usage
     """
 
-    def __init__(self, display: FramebufferDisplay, tier1_limit):
+    def __init__(self, display: FramebufferDisplay, tier1_limit, co2_safe_under, co2_unsafe_over):
         self.tier1_limit: int = tier1_limit
 
         palette = displayio.Palette(6)
@@ -50,13 +50,11 @@ class Dashboard:
         palette[WHITE] = WHITE_HEX
         palette[GRAY] = GRAY_HEX
 
-        rows = [n * ROW_HEIGHT for n in range(3)]
+        rows = [n * ROW_HEIGHT for n in range(4)]
 
         full_width = display.width
         display_group = displayio.Group()
         display.root_group = display_group
-
-        # carbon intensity
 
         self.grid_intensity_gauge = VsAverageGauge(
             "CO2e",
@@ -67,8 +65,6 @@ class Dashboard:
             "g/kWh",
         )
 
-        # grid stress
-
         self.demand_gauge = VsAverageGauge(
             "Demand",
             full_width,
@@ -77,8 +73,6 @@ class Dashboard:
             rows[1],
             "MW",
         )
-
-        # price
 
         self.energy_usage_gauge = ExceedableLimitGauge(
             "Usage",
@@ -89,14 +83,16 @@ class Dashboard:
             "kWh",
         )
 
-        self.co2_label = Label(
-            terminalio.FONT,
-            text="",
-            color=WHITE_HEX,
-            anchored_position=(full_width - ROW_PADDING, rows[2] + ROW_HEIGHT // 2),
-            anchor_point=(1, 0.5),
+        self.co2_gauge = ThresholdGauge(
+            "CO2",
+            full_width,
+            display_group,
+            palette,
+            rows[3],
+            "ppm",
+            co2_safe_under,
+            co2_unsafe_over,
         )
-        display_group.append(self.co2_label)
 
     def _price_label_text(self, price_centicents):
         """Return a string representation of the price in cents per kWh."""
@@ -119,7 +115,7 @@ class Dashboard:
 
         self.energy_usage_gauge.update(energy_usage_kwh, self.tier1_limit)
 
-        self.co2_label.text = f"{co2_ppm} ppm" if co2_ppm else ""
+        self.co2_gauge.update(co2_ppm)
 
 
 class Gauge:
@@ -298,3 +294,65 @@ class VsAverageGauge(Gauge):
         upper_value = data[upper_index]
 
         return lower_value + (upper_value - lower_value) * (theoretical_index - lower_index)
+
+
+class ThresholdGauge(Gauge):
+    def __init__(self, name, full_width, display_group, palette, y_offset, unit, safe_under, unsafe_over):
+        self.unit = unit
+        self.safe_under = safe_under
+        self.unsafe_over = unsafe_over
+        self.full_scale = unsafe_over * 2
+
+        super().__init__(name, full_width, display_group, palette, y_offset, "")
+
+        self.rectangle.color_index = GREEN
+
+        self.yellow_rectangle = vectorio.Rectangle(
+            pixel_shader=palette,
+            color_index=BLACK,
+            width=1,
+            height=BAR_HEIGHT,
+            x=full_width + 1,
+            y=y_offset + BAR_PADDING + ROW_PADDING,
+        )
+        display_group.append(self.yellow_rectangle)
+
+        self.red_rectangle = vectorio.Rectangle(
+            pixel_shader=palette,
+            color_index=BLACK,
+            width=1,
+            height=BAR_HEIGHT,
+            x=full_width + 1,
+            y=y_offset + BAR_PADDING + ROW_PADDING,
+        )
+        display_group.append(self.red_rectangle)
+
+    def update(self, value):
+        self.left_label.text = f"{value} {self.unit}" if value else ""
+
+        capped = min(value, self.full_scale)
+        green_end = min(capped, self.safe_under)
+        yellow_end = min(capped, self.unsafe_over)
+
+        green_width = self._bar_length_for(green_end)
+        yellow_width = self._bar_length_for(yellow_end) - green_width
+        red_width = self._bar_length_for(capped) - green_width - yellow_width
+
+        self.rectangle.width = max(1, green_width)
+
+        if yellow_width <= 0:
+            self.yellow_rectangle.x = self.full_width + 1
+        else:
+            self.yellow_rectangle.color_index = YELLOW
+            self.yellow_rectangle.width = yellow_width
+            self.yellow_rectangle.x = TEXT_COLUMN_WIDTH + green_width
+
+        if red_width <= 0:
+            self.red_rectangle.x = self.full_width + 1
+        else:
+            self.red_rectangle.color_index = RED
+            self.red_rectangle.width = red_width
+            self.red_rectangle.x = TEXT_COLUMN_WIDTH + green_width + yellow_width
+
+    def _bar_length_for(self, value):
+        return int((self.full_width - TEXT_COLUMN_WIDTH - ROW_PADDING) * value / self.full_scale)
